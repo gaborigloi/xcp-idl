@@ -87,10 +87,8 @@ let ( + ) state operation =
 		| Activated _, Detach     -> error ()
 
 let superstate states =
-	let activated = List.fold_left (fun acc s ->
-		acc || (s = Activated RO) || (s = Activated RW)) false states in
-	let rw = List.fold_left (fun acc s ->
-		acc || (s = Activated RW) || (s = Attached RW)) false states in
+	let activated = List.exists (function Activated _ -> true | _ -> false) states in
+	let rw = List.exists (function Activated RW | Attached RW -> true | _ -> false) states in
 	if states = []
 	then Detached
 	else
