@@ -84,7 +84,7 @@ Executable lib_test
   MainIs:             test.ml
   Custom:             true
   Install:            false
-  BuildDepends:       lwt, lwt.unix, xcp, xcp.xen, threads, rpclib, oUnit
+  BuildDepends:       lwt, lwt.unix, xcp, xcp.xen, xcp.storage, threads, rpclib, oUnit
 
 Test lib_test
   Command:            ./test.native

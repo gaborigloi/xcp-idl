@@ -10,6 +10,7 @@ let suite =
       Http_test.tests;
       Debug_test.tests;
       Syslog_test.tests;
+      Vdi_automaton_test.tests;
     ]
 
 let () =
