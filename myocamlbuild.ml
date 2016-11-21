@@ -1,5 +1,5 @@
 (* OASIS_START *)
-(* DO NOT EDIT (digest: 1c35a77ee4b7460c9a976af0c323b7ea) *)
+(* DO NOT EDIT (digest: f637f8b3d473998c7e79ff4694cda161) *)
 module OASISGettext = struct
 (* # 22 "src/oasis/OASISGettext.ml" *)
 
@@ -627,7 +627,7 @@ let package_default =
           ("rrd", ["lib"]);
           ("network", ["lib"]);
           ("memory", ["lib"]);
-          ("lib_test", ["lib"; "xen"]);
+          ("lib_test", ["lib"; "storage"; "xen"]);
           ("example", ["lib"])
        ]
   }
