@@ -324,3 +324,4 @@ true: annot, bin_annot
 <v6/v6_interface.ml>: pkg_rpclib.idl
 <lib/xcp_channel.ml>: pkg_rpclib.syntax
 <lib/channel_helper.ml>: pkg_lwt.syntax
+true: safe_string
