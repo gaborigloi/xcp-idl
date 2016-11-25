@@ -385,11 +385,11 @@ let binary_handler call_of_string string_of_response process s context =
 	let ic = Unix.in_channel_of_descr s in
 	let oc = Unix.out_channel_of_descr s in
 	(* Read a 16 byte length encoded as a string *)
-	let len_buf = String.make 16 '\000' in
-	really_input ic len_buf 0 (String.length len_buf);
-	let len = int_of_string len_buf in
-	let msg_buf = String.make len '\000' in
-	really_input ic msg_buf 0 (String.length msg_buf);
+	let len_buf = Bytes.make 16 '\000' in
+	really_input ic len_buf 0 (Bytes.length len_buf);
+	let len = int_of_string (Bytes.to_string len_buf) in
+	let msg_buf = Bytes.make len '\000' in
+	really_input ic msg_buf 0 (Bytes.length msg_buf);
 	let (request: Rpc.call) = call_of_string msg_buf in
 	let (result: Rpc.response) = process context request in
 	let msg_buf = string_of_response result in
@@ -417,8 +417,11 @@ let http_handler call_of_string string_of_response process s =
 				debug "Failed to read content-length"
 			| Some content_length ->
 				let content_length = int_of_string content_length in
-				let request_txt = String.make content_length '\000' in
+				let request_txt = Bytes.make content_length '\000' in
 				really_input ic request_txt 0 content_length;
+        (* This operation is safe, because we own request_txt, and shadow the
+         * previous value with this binding *)
+        let request_txt = Bytes.unsafe_to_string request_txt in
 				let rpc_call = call_of_string request_txt in
 				debug "%s" (Rpc.string_of_call rpc_call);
 				let rpc_response = process rpc_call in
@@ -532,7 +535,8 @@ let pidfile_write filename =
 	(fun () ->
 		let pid = Unix.getpid () in
 		let buf = string_of_int pid ^ "\n" in
-		let len = String.length buf in
+    let buf = Bytes.of_string buf in
+		let len = Bytes.length buf in
 		if Unix.write fd buf 0 len <> len
 		then failwith "pidfile_write failed")
 	(fun () -> Unix.close fd)

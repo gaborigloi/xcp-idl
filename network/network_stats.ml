@@ -92,12 +92,12 @@ module File_helpers = struct
 		let rec fold acc = 
 			let n = Unix.read fd block 0 block_size in
 			(* Consider making the interface explicitly use Substrings *)
-			let s = if n = block_size then block else String.sub block 0 n in
+			let s = if n = block_size then block else Bytes.sub block 0 n in
 			if n = 0 then acc else fold (f acc s) in
 		fold start
 
 	let buffer_of_fd fd = 
-		fd_blocks_fold 1024 (fun b s -> Buffer.add_string b s; b) (Buffer.create 1024) fd
+		fd_blocks_fold 1024 (fun b s -> Buffer.add_bytes b s; b) (Buffer.create 1024) fd
 
 	let buffer_of_file file_path = with_file file_path [ Unix.O_RDONLY ] 0 buffer_of_fd
 

@@ -9,9 +9,9 @@ exception End_of_file
 exception No_useful_protocol
 
 let copy_all src dst =
-  let buffer = String.make 16384 '\000' in
+  let buffer = Bytes.make 16384 '\000' in
   while_lwt true do
-    lwt n = Lwt_unix.read src buffer 0 (String.length buffer) in
+    lwt n = Lwt_unix.read src buffer 0 (Bytes.length buffer) in
     if n = 0
     then raise_lwt End_of_file
     else

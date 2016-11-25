@@ -149,15 +149,21 @@ module Buffered_IO = struct
   let read_exactly ic len =
     let buf = Bytes.create len in
     read_into_exactly ic buf 0 len >>= function
-    | true -> return (Some buf)
+    (* This is safe because we uniquely own buf, and give up its ownership *)
+    | true -> return (Some (Bytes.unsafe_to_string buf))
     | false -> return None
 
   let read ic n =
     let buf = Bytes.make n '\000' in
     let actually_read = input ic buf 0 n in
-    if actually_read = n
-    then buf
-    else Bytes.sub buf 0 actually_read
+    let buf =
+      if actually_read = n then
+        buf
+      else
+        Bytes.sub buf 0 actually_read
+    in
+    (* This is safe because we uniquely own buf, and give up ownership *)
+    Bytes.unsafe_to_string buf
 
   let write oc x = output_string oc x; flush oc
 
