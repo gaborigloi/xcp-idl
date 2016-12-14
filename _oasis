@@ -85,7 +85,7 @@ Executable lib_test
   Build$: flag(tests)
   Custom:             true
   Install:            false
-  BuildDepends:       lwt, lwt.unix, xcp, xcp.xen, threads, rpclib, oUnit
+  BuildDepends:       lwt, lwt.unix, xcp, xcp.xen, xcp.storage, threads, rpclib, oUnit
 
 Test lib_test
   Run$: flag(tests)
