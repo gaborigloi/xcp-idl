@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 602453b3fb6b3d0b87012f531fd91c7d)
+# DO NOT EDIT (digest: 64afd7dfbea2d4c6985dd9aae8d19ea3)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -244,6 +244,7 @@ true: annot, bin_annot
 <lib_test/test.{native,byte}>: pkg_xcp-inventory
 <lib_test/test.{native,byte}>: pkg_xmlm
 <lib_test/test.{native,byte}>: use_xcp
+<lib_test/test.{native,byte}>: use_xcp_storage
 <lib_test/test.{native,byte}>: use_xcp_updates
 <lib_test/test.{native,byte}>: use_xcp_xen
 <lib_test/*.ml{,i,y}>: pkg_cmdliner
@@ -267,6 +268,7 @@ true: annot, bin_annot
 <lib_test/*.ml{,i,y}>: pkg_xcp-inventory
 <lib_test/*.ml{,i,y}>: pkg_xmlm
 <lib_test/*.ml{,i,y}>: use_xcp
+<lib_test/*.ml{,i,y}>: use_xcp_storage
 <lib_test/*.ml{,i,y}>: use_xcp_updates
 <lib_test/*.ml{,i,y}>: use_xcp_xen
 <lib_test/test.{native,byte}>: custom
