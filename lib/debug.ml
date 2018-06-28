@@ -159,6 +159,42 @@ let output_log brand level priority s =
     Syslog.log (get_facility ()) level msg
   end
 
+let logs_reporter =
+  let logs_to_syslog_level = function
+    (* In practice we only care about Syslog.Debug,Warning,Info,Err,
+       because these are the ones we use in the log functions in Debug.Make *)
+    | Logs.Debug -> Syslog.Debug
+    | Logs.Info -> Syslog.Info
+    | Logs.Warning -> Syslog.Warning
+    | Logs.Error -> Syslog.Err
+    | Logs.App -> Syslog.Info
+  in
+  let logs_level_to_priority = function
+    (* These string match the ones used by the logging functions in Debug.Make *)
+    | Logs.Debug -> "debug"
+    | Logs.Info -> "info"
+    | Logs.Warning -> "warn"
+    | Logs.Error -> "error"
+    (* This is used by applications, not libraries - we should not get this in practice *)
+    | Logs.App -> "app"
+  in
+  let report src level ~over k msgf =
+    let formatter ?header ?tags fmt =
+      let k _ =
+        let msg = Format.flush_str_formatter () in
+        output_log (Logs.Src.name src) (logs_to_syslog_level level) (logs_level_to_priority level) msg;
+        over ();
+        k ()
+      in
+      Format.kfprintf k Format.str_formatter fmt
+    in
+    msgf formatter
+  in
+  { Logs.report = report }
+
+let init_logs () =
+  Logs.set_reporter logs_reporter
+
 let rec split_c c str =
   try
     let i = String.index str c in
