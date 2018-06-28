@@ -138,12 +138,6 @@ let is_disabled brand level =
       Hashtbl.mem logging_disabled_for (brand, level)
     )
 
-let reset_levels () =
-  Mutex.execute loglevel_m (fun () ->
-      loglevel := default_loglevel;
-      Hashtbl.clear logging_disabled_for
-    )
-
 
 let facility = ref Syslog.Daemon
 let facility_m = Mutex.create ()
@@ -158,6 +152,38 @@ let output_log brand level priority s =
 
     Syslog.log (get_facility ()) level msg
   end
+
+let logs_to_syslog_level = function
+  (* In practice we only care about Syslog.Debug,Warning,Info,Err,
+     because these are the ones we use in the log functions in Debug.Make *)
+  | Logs.Debug -> Syslog.Debug
+  | Logs.Info -> Syslog.Info
+  | Logs.Warning -> Syslog.Warning
+  | Logs.Error -> Syslog.Err
+  | Logs.App -> Syslog.Info
+
+let logs_level_to_priority = function
+  (* These string match the ones used by the logging functions in Debug.Make *)
+  | Logs.Debug -> "debug"
+  | Logs.Info -> "info"
+  | Logs.Warning -> "warn"
+  | Logs.Error -> "error"
+  | Logs.App -> "app"
+
+let reporter =
+  let report src level ~over k msgf =
+    let formatter ?header ?tags fmt =
+      let k _ =
+        let msg = Format.flush_str_formatter () in
+        output_log (Logs.Src.name src) (logs_to_syslog_level level) (logs_level_to_priority level) msg;
+        over ();
+        k ()
+      in
+      Format.kfprintf k Format.str_formatter fmt
+    in
+    msgf formatter
+  in
+  { Logs.report = report }
 
 let rec split_c c str =
   try
@@ -200,11 +226,8 @@ let with_thread_named name f x =
     raise e
 
 module StringSet = Set.Make(struct type t=string let compare=Pervasives.compare end)
-let debug_keys = ref StringSet.empty
-let get_all_debug_keys () =
-  StringSet.fold (fun key keys -> key::keys) !debug_keys []
-
-let dkmutex = Mutex.create ()
+let name_to_sources_map = Hashtbl.create 10
+let name_to_source_map_mutex = Mutex.create ()
 
 module type BRAND = sig
   val name: string
@@ -218,6 +241,18 @@ let add_to_stoplist brand level =
 let remove_from_stoplist brand level =
   Hashtbl.remove logging_disabled_for (brand, level)
 
+let syslog_to_logs_level = function
+  (* In practice we only care about Syslog.Debug,Warning,Info,Err,
+     because these are the ones we use in the log functions in Debug.Make *)
+  | Syslog.Debug -> Logs.Debug
+  | Syslog.Info -> Logs.Info
+  | Syslog.Notice -> Logs.Info
+  | Syslog.Warning -> Logs.Warning
+  | Syslog.Err -> Logs.Error
+  | Syslog.Crit -> Logs.Error
+  | Syslog.Alert -> Logs.Error
+  | Syslog.Emerg -> Logs.Error
+
 let disable ?level brand =
   let levels = match level with
     | None -> all_levels
@@ -225,21 +260,20 @@ let disable ?level brand =
   in
   Mutex.execute loglevel_m (fun () ->
       List.iter (add_to_stoplist brand) levels
-    )
-
-let enable ?level brand =
-  let levels = match level with
-    | None -> all_levels
-    | Some l -> [l]
+    );
+  (* For efficiency, we also disable logging using Logs, for the
+     sources already registered under this "brand", so that we won't even call
+     the reporter *)
+  let logs_level = match level with
+    (* When we set the level to None, Logs will not log anything *)
+    | None -> None
+    | Some l -> Some (syslog_to_logs_level l)
   in
-  Mutex.execute loglevel_m (fun () ->
-      List.iter (remove_from_stoplist brand) levels
-    )
+  match Hashtbl.find_opt name_to_sources_map brand with
+  | Some sources -> List.iter (fun s -> Logs.Src.set_level s logs_level) sources
+  | None -> ()
 
-let set_level level =
-  Mutex.execute loglevel_m (fun () ->
-      loglevel := level
-    )
+let set_level level = Logs.set_level ~all:true (Some (syslog_to_logs_level level))
 
 module type DEBUG = sig
   val debug : ('a, unit, string, unit) format4 -> 'a
@@ -258,9 +292,14 @@ module type DEBUG = sig
 end
 
 module Make = functor(Brand: BRAND) -> struct
+  let source = Logs.Src.create Brand.name
   let _ =
-    Mutex.execute dkmutex (fun () ->
-        debug_keys := StringSet.add Brand.name !debug_keys)
+    Mutex.execute name_to_source_map_mutex (fun () ->
+        let sources =
+          match Hashtbl.find_opt name_to_sources_map Brand.name with
+            Some l -> l | None -> []
+        in
+        Hashtbl.replace name_to_sources_map Brand.name (source::sources))
 
   let output level priority (fmt: ('a, unit, string, 'b) format4) =
     Printf.kprintf
